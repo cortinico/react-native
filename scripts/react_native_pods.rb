@@ -3,6 +3,8 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+require 'json'
+require 'open3'
 require 'pathname'
 require_relative './react_native_pods_utils/script_phases.rb'
 require_relative './cocoapods/flipper.rb'
@@ -16,6 +18,8 @@ $REACT_CODEGEN_PODSPEC_GENERATED = false
 $REACT_CODEGEN_DISCOVERY_DONE = false
 DEFAULT_OTHER_CPLUSPLUSFLAGS = '$(inherited)'
 NEW_ARCH_OTHER_CPLUSPLUSFLAGS = '$(inherited) -DRCT_NEW_ARCH_ENABLED=1 -DFOLLY_NO_CONFIG -DFOLLY_MOBILE=1 -DFOLLY_USE_LIBCPP=1'
+
+$START_TIME = Time.now.to_i
 
 def use_react_native! (options={})
   # The prefix to react-native
@@ -32,6 +36,8 @@ def use_react_native! (options={})
 
   # Include Hermes dependencies
   hermes_enabled = options[:hermes_enabled] ||= false
+
+  flipper_configuration = options[:flipper_configuration] ||= FlipperConfiguration.disabled
 
   if `/usr/sbin/sysctl -n hw.optional.arm64 2>&1`.to_i == 1 && !RUBY_PLATFORM.include?('arm64')
     Pod::UI.warn 'Do not use "pod install" from inside Rosetta2 (x86_64 emulation on arm64).'
@@ -58,8 +64,6 @@ def use_react_native! (options={})
   pod 'React-RCTText', :path => "#{prefix}/Libraries/Text"
   pod 'React-RCTVibration', :path => "#{prefix}/Libraries/Vibration"
   pod 'React-Core/RCTWebSocket', :path => "#{prefix}/"
-
-  install_flipper_dependencies(production, prefix)
 
   pod 'React-bridging', :path => "#{prefix}/ReactCommon/react/bridging"
   pod 'React-cxxreact', :path => "#{prefix}/ReactCommon/cxxreact"
@@ -102,10 +106,24 @@ def use_react_native! (options={})
   end
 
   if hermes_enabled
-    system("(cd #{prefix} && node scripts/hermes/prepare-hermes-for-build)")
+    prepare_hermes = 'node scripts/hermes/prepare-hermes-for-build'
+    react_native_dir = Pod::Config.instance.installation_root.join(prefix)
+    prep_output, prep_status = Open3.capture2e(prepare_hermes, :chdir => react_native_dir)
+    prep_output.split("\n").each { |line| Pod::UI.info line }
+    abort unless prep_status == 0
+
     pod 'React-hermes', :path => "#{prefix}/ReactCommon/hermes"
-    pod 'hermes-engine', :path => "#{prefix}/sdks/hermes/hermes-engine.podspec"
     pod 'libevent', '~> 2.1.12'
+    pod 'hermes-engine', :path => "#{prefix}/sdks/hermes/hermes-engine.podspec"
+  end
+
+  # CocoaPods `configurations` option ensures that the target is copied only for the specified configurations,
+  # but those dependencies are still built.
+  # Flipper doesn't currently compile for release https://github.com/facebook/react-native/issues/33764
+  # Setting the production flag to true when build for production make sure that we don't install Flipper in the app in the first place.
+  if flipper_configuration.flipper_enabled && !production
+    install_flipper_dependencies(prefix)
+    use_flipper_pods(flipper_configuration.versions, :configurations => flipper_configuration.configurations)
   end
 
   pods_to_update = LocalPodspecPatch.pods_to_update(options)
@@ -122,6 +140,7 @@ def get_default_flags()
   flags = {
     :fabric_enabled => false,
     :hermes_enabled => false,
+    :flipper_configuration => FlipperConfiguration.disabled
   }
 
   if ENV['RCT_NEW_ARCH_ENABLED'] == '1'
@@ -133,6 +152,7 @@ def get_default_flags()
 end
 
 def use_flipper!(versions = {}, configurations: ['Debug'])
+  Pod::UI.warn "use_flipper is deprecated, use the flipper_configuration option in the use_react_native function"
   use_flipper_pods(versions, :configurations => configurations)
 end
 
@@ -224,6 +244,8 @@ def react_native_post_install(installer, react_native_path = "../node_modules/re
   modify_flags_for_new_architecture(installer, cpp_flags)
 
   set_node_modules_user_settings(installer, react_native_path)
+
+  puts "Pod install took #{Time.now.to_i - $START_TIME} [s] to run"
 end
 
 def modify_flags_for_new_architecture(installer, cpp_flags)

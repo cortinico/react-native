@@ -1033,15 +1033,21 @@ public class NativeAnimatedModule extends NativeAnimatedModuleSpec
    */
   @Override
   public void queueAndExecuteBatchedOperations(final ReadableArray opsAndArgs) {
+    final int opBufferSize = opsAndArgs.size();
+
+    if (ANIMATED_MODULE_DEBUG) {
+      FLog.e(NAME, "queueAndExecuteBatchedOperations: opBufferSize: " + opBufferSize);
+    }
+
     // This block of code is unfortunate and should be refactored - we just want to
     // extract the ViewTags in the ReadableArray to mark animations on views as being enabled.
     // We only do this for initializing animations on views - disabling animations on views
     // happens later, when the disconnect/stop operations are actually executed.
-    final int opBufferSize = opsAndArgs.size();
     for (int i = 0; i < opBufferSize; ) {
       BatchExecutionOpCodes command = BatchExecutionOpCodes.fromId(opsAndArgs.getInt(i++));
       switch (command) {
         case OP_CODE_GET_VALUE:
+        case OP_START_LISTENING_TO_ANIMATED_NODE_VALUE:
         case OP_STOP_LISTENING_TO_ANIMATED_NODE_VALUE:
         case OP_CODE_STOP_ANIMATION:
         case OP_CODE_FLATTEN_ANIMATED_NODE_OFFSET:
@@ -1054,7 +1060,6 @@ public class NativeAnimatedModule extends NativeAnimatedModuleSpec
           break;
         case OP_CODE_CREATE_ANIMATED_NODE:
         case OP_CODE_UPDATE_ANIMATED_NODE_CONFIG:
-        case OP_START_LISTENING_TO_ANIMATED_NODE_VALUE:
         case OP_CODE_CONNECT_ANIMATED_NODES:
         case OP_CODE_DISCONNECT_ANIMATED_NODES:
         case OP_CODE_SET_ANIMATED_NODE_VALUE:
@@ -1110,7 +1115,6 @@ public class NativeAnimatedModule extends NativeAnimatedModuleSpec
                   break;
                 case OP_START_LISTENING_TO_ANIMATED_NODE_VALUE:
                   final int tag = opsAndArgs.getInt(i++);
-                  final int value = opsAndArgs.getInt(i++);
                   final AnimatedNodeValueListener listener =
                       new AnimatedNodeValueListener() {
                         public void onValueUpdate(double value) {
