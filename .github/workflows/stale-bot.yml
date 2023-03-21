@@ -5,7 +5,6 @@ on:
 jobs:
   stale:
     runs-on: ubuntu-latest
-    if: github.repository == 'facebook/react-native'
     permissions:
       issues: write
       pull-requests: write
@@ -22,7 +21,6 @@ jobs:
           exempt-pr-labels: Help Wanted :octocat:, Good first issue, Never gets stale
   stale-asc:
     runs-on: ubuntu-latest
-    if: github.repository == 'facebook/react-native'
     permissions:
       issues: write
       pull-requests: write
@@ -40,7 +38,6 @@ jobs:
           exempt-pr-labels: Help Wanted :octocat:, Good first issue, Never gets stale
   stale-needs-author-feedback:
     runs-on: ubuntu-latest
-    if: github.repository == 'facebook/react-native'
     permissions:
       issues: write
       pull-requests: write
@@ -58,7 +55,6 @@ jobs:
           exempt-pr-labels: Help Wanted :octocat:, Good first issue, Never gets stale
   stale-needs-author-feedback-asc:
     runs-on: ubuntu-latest
-    if: github.repository == 'facebook/react-native'
     permissions:
       issues: write
       pull-requests: write
