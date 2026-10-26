@@ -28,15 +28,14 @@ appId: ${APP_ID} # iOS: com.meta.RNTester.localDevelopment | Android: com.facebo
     visible:
       id: 'section-list-viewability-horizontal-wait'
     timeout: 30000
-# Target the second-to-last item: the last one can never reach the center, so
-# `centerElement` would burn extra swipes at the end of the list.
+# The example requires 100% item visibility before reporting viewability.
+# Target the second-to-last item: the last one may never be fully visible.
 - scrollUntilVisible:
     element:
       id: 'Cheesecake'
     direction: RIGHT
     speed: 60
-    visibilityPercentage: 50
-    centerElement: true
+    visibilityPercentage: 100
     timeout: 120000
 - extendedWaitUntil:
     visible:
