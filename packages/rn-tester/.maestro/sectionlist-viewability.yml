@@ -29,7 +29,7 @@ appId: ${APP_ID} # iOS: com.meta.RNTester.localDevelopment | Android: com.facebo
       id: 'section-list-viewability-horizontal-wait'
     timeout: 30000
 # The example requires 100% item visibility before reporting viewability.
-# Target the second-to-last item: the last one may never be fully visible.
+# Target Cheesecake, the item asserted in the output below.
 - scrollUntilVisible:
     element:
       id: 'Cheesecake'
